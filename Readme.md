@@ -30,3 +30,5 @@ sometimes tanks can get stuck: between some specific terrain or with each other
 
 ## Launch
 `python tanks.py` from command line
+# 测试文档
+[说明文档.md](./说明文档.md)
