@@ -10,89 +10,110 @@ import Tkinter as tk
 import os, threading
 
 
-def run_single():
-	tanks.game = tanks.Game()
-	tanks.castle = tanks.Castle()
-	tanks.game.stage = 1
-	tanks.game.nr_of_players = 1
-	tanks.game.nextLevel()
+def run(nr_of_players=1):
+    tanks.game = tanks.Game()
+    tanks.castle = tanks.Castle()
+    tanks.game.stage = 1
+    tanks.game.nr_of_players = nr_of_players
+    tanks.game.nextLevel()
 
-def run_double():
-	game = tanks.Game()
-	tanks.castle = tanks.Castle()
-	game.stage = 1
-	game.nr_of_players = 2
-	game.nextLevel()
 
 def get_info():
-	for player in tanks.players:
-		# 玩家 位置 生命数 状态
-		print("玩家"+str((player.rect[0],player.rect[1]))+str(player.state))
-	for enemy in tanks.enemies:
-		# 敌人 位置 形态 路径
-		print("敌人"+str((enemy.rect[0],enemy.rect[1]))+str(enemy.type)+str(enemy.path))
-	for bullet in tanks.bullets:
-		# 子弹 位置 归属 生命数 状态
-		print("子弹"+str((bullet.rect[0],bullet.rect[1]))+str(bullet.owner))
-	print("BUFF"+str(tanks.bonuses))
-	print("LABELS"+str(tanks.labels))
+    for player in tanks.players:
+        # 玩家 位置 生命数 状态
+        print("玩家" + str((player.rect[0], player.rect[1])) + str(player.state))
+    for enemy in tanks.enemies:
+        # 敌人 位置 形态 路径
+        print("敌人" + str((enemy.rect[0], enemy.rect[1])) + str(enemy.type) + str(enemy.path))
+    for bullet in tanks.bullets:
+        # 子弹 位置 归属 强度
+        print("子弹" + str((bullet.rect[0], bullet.rect[1])) + str(bullet.owner) + str(bullet.power))
+    print("BUFF" + str(tanks.bonuses))
+    print("LABELS" + str(tanks.labels))
+    print ("当前关卡" + str(tanks.game.level) + "地图\n" + str(tanks.game.level.mapr))
+
+
+def get_output_doc():
+    print (tanks.game.level)
+    for player in tanks.players:
+        print ("消灭" + str(player.trophies) + str(player.score))
+
 
 def player_move():
-	for player in tanks.players:
-		player.move(player.DIR_UP)
+    for player in tanks.players:
+        player.move(player.direction)
+        player.fire()
 
-# 作弊能力
+
+# 作弊能力-直接下一关
 def cheatNextLevel():
-	tanks.game.finishLevel()
+    tanks.game.finishLevel()
+
+
+# 作弊能力-无限火力（？）
+def cheatSuperPowers():
+    for player in tanks.players:
+        player.superpowers = 3
+        player.max_active_bullets = 2
+        player.lives = 30
+
+
+# 作弊能力-无敌防御
+def cheatSuperDefense():
+    tanks.game.level.buildFortress(tanks.game.level.TILE_STEEL)
+    for player in tanks.players:
+        tanks.game.shieldPlayer(player, True, 100000)
+
 
 def gui():
-	root = tk.Tk()
-	root.geometry('460x240')
-	root.title('自动化测试')
+    root = tk.Tk()
+    root.geometry('460x240')
+    root.title('自动化测试')
 
-	lb1 = tk.Label(root, text='自动化测试')
-	lb1.pack()
+    lb1 = tk.Label(root, text='自动化测试')
+    lb1.pack()
 
-	btn1 = tk.Button(root, text='单人模式', command=threading.Thread(target=run_single).start())
-	btn1.place(relx=0.1, rely=0.4, relwidth=0.3, relheight=0.1)
-	btn2 = tk.Button(root, text='双人模式', command=run_double())
-	btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
+    # btn1 = tk.Button(root, text='单人模式', command=threading.Thread(target=run_single).start())
+    btn1 = tk.Button(root, text='单人模式', command=run())
+    btn1.place(relx=0.1, rely=0.4, relwidth=0.3, relheight=0.1)
+    btn2 = tk.Button(root, text='双人模式', command=run())
+    btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
 
-	btn2 = tk.Button(root, text='自动化开始', command=get_info)
-	btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
-	btn2 = tk.Button(root, text='显示信息', command=get_info)
-	btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
-	btn2 = tk.Button(root, text='结果分析', command=get_info)
-	btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
+    btn2 = tk.Button(root, text='自动化开始', command=get_info)
+    btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
+    btn2 = tk.Button(root, text='显示信息', command=get_info)
+    btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
+    btn2 = tk.Button(root, text='结果分析', command=get_info)
+    btn2.place(relx=0.6, rely=0.4, relwidth=0.3, relheight=0.1)
 
-
-	txt = tk.Text(root)
-	txt.place(rely=0.6, relheight=0.4)
-	root.mainloop()
+    txt = tk.Text(root)
+    txt.place(rely=0.6, relheight=0.4)
+    root.mainloop()
 
 
 def terminal():
-	FLAG = True
-	while (FLAG == True):
-		message = raw_input("用户输入:")
-		# run 单人游戏
-		if message == "r":
-			threading.Thread(target=run_single).start()
-		# quit 退出
-		elif message == "q":
-			FLAG=False
-		# get 获取信息
-		elif message == "get":
-			get_info()
-		# move 自动化测试开始
-		elif message == "m":
-			threading.Thread(target=player_move()).start()
-		# move 自动化测试开始
-		elif message == "l":
-			cheatNextLevel()
-
+    FLAG = True
+    while (FLAG == True):
+        message = raw_input("用户输入:")
+        # run 单人游戏
+        if message == "r1":
+            threading.Thread(target=run(1)).start()
+        elif message == "r2":
+            threading.Thread(target=run(2)).start()
+        # quit 退出
+        elif message == "q":
+            FLAG = False
+        # get 获取信息
+        elif message == "get":
+            get_info()
+        # move 自动化测试开始
+        elif message == "m":
+            threading.Thread(target=player_move()).start()
+        # move 自动化测试开始
+        elif message == "l":
+            cheatNextLevel()
 
 
 if __name__ == "__main__":
-	terminal()
-	# gui()
+    terminal()
+    # gui()
