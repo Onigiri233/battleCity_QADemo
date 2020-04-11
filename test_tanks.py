@@ -15,6 +15,7 @@ import os, threading
 def run(nr_of_players=1):
     tanks.game = tanks.Game()
     tanks.castle = tanks.Castle()
+    tanks.play_sounds=False
     tanks.game.stage = 0
     tanks.game.nr_of_players = nr_of_players
     tanks.game.nextLevel()
@@ -54,8 +55,8 @@ def get_info():
         strbuf += "BUFF类型%s\n"%(bonus_type[bonus.bonus],)
     strbuf += "当前关卡%s\n"%(tanks.game.stage)
     level = tanks.Level(tanks.game.stage)
-    print (level.obstacle_rects)
-    print (level.mapr)
+    # print (level.obstacle_rects)
+    # print (level.mapr)
     for tile in level.mapr:
         for player in tanks.players:
             # pygame.Rect(position[0] - 8 , position[1] + 11, 8, 6).colliderect(castle.rect)
@@ -69,9 +70,9 @@ def get_info():
 
 
 def get_output_doc():
-    print (tanks.game.level)
+    print (tanks.game.stage)
     for player in tanks.players:
-        print ("消灭" + str(player.trophies) + str(player.score))
+        print ("消灭%s，得分%s" %(str(player.trophies) ,str(player.score)))
 
 
 
@@ -123,6 +124,25 @@ def player_move_gui():
     th = threading.Thread(target=player_move)
     th.setDaemon(True)  # 守护线程
     th.start()
+def route_info():
+    rects = []
+
+    while not tanks.game.game_over:
+        print ("%s!!!%s\n|||||||||||||||||%s")%(cmp(rects,tanks.game.level.obstacle_rects),rects,tanks.game.level.obstacle_rects,)
+        if cmp(rects,tanks.game.level.obstacle_rects)==0:
+            pass
+        else:
+            rects = tanks.game.level.obstacle_rects
+            surface_route = pygame.Surface((8 * 2, 8 * 2)).convert_alpha()
+            surface_route.fill((255, 0, 255, 50))
+            for tile in rects:
+                tanks.screen.blit(surface_route, tile.topleft)
+
+
+def route_info_gui():
+    th = threading.Thread(target=route_info)
+    th.setDaemon(True)  # 守护线程
+    th.start()
 
 # 作弊能力-直接下一关
 def cheatNextLevel():
@@ -153,14 +173,16 @@ def gui():
     lb1.pack()
 
 
-    btn1 = tk.Button(root, text='单人模式', command=run_gui_single)
-    btn1.place(relx=0.1, rely=0.1, relwidth=0.3, relheight=0.15)
-    btn2 = tk.Button(root, text='双人模式', command=run_gui_double)
-    btn2.place(relx=0.1, rely=0.4, relwidth=0.3, relheight=0.15)
+    btn_run1 = tk.Button(root, text='单人模式', command=run_gui_single)
+    btn_run1.place(relx=0.05, rely=0.1, relwidth=0.3, relheight=0.15)
+    btn_run2 = tk.Button(root, text='双人模式', command=run_gui_double)
+    btn_run2.place(relx=0.05, rely=0.3, relwidth=0.3, relheight=0.15)
 
-    btn3 = tk.Button(root, text='自动化开始', command=player_move_gui)
+    btn_testrun = tk.Button(root, text='自动化开始', command=player_move_gui)
+    btn_testrun.place(relx=0.05, rely=0.5, relwidth=0.3, relheight=0.15)
+
+    btn3 = tk.Button(root, text='显示路径', command=route_info_gui)
     btn3.place(relx=0.5, rely=0.1, relwidth=0.2, relheight=0.1)
-
     def get_info_gui():
         strbuf=get_info()
         info.set(strbuf)
