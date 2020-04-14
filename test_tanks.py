@@ -5,11 +5,16 @@
 @Author  : Fantuan
 @Software: PyCharm
 """
+import math
+import time
+
 import pygame
 
 import tanks
 import Tkinter as tk
 import os, threading, random
+
+from a_star import AStar
 
 
 def run(nr_of_players=1):
@@ -19,19 +24,27 @@ def run(nr_of_players=1):
     tanks.game.stage = 0
     tanks.game.nr_of_players = nr_of_players
     tanks.game.nextLevel()
-    player_move_gui()
+
 
 
 def run_gui_single():
     th = threading.Thread(target=run, args=(1,))
     th.setDaemon(True)  # 守护线程
     th.start()
+    time.sleep(1)
+    route_info_gui()
+    time.sleep(1)
+    player_move_gui()
 
 
 def run_gui_double():
     th = threading.Thread(target=run, args=(2,))
     th.setDaemon(True)  # 守护线程
     th.start()
+    time.sleep(1)
+    route_info_gui()
+    time.sleep(1)
+    player_move_gui()
 
 
 dirction = ("向上", "向右", "向下", "向左")
@@ -76,14 +89,23 @@ def get_output_doc():
         print ("消灭%s，得分%s" % (str(player.trophies), str(player.score)))
 
 
-def player_move():
+def player_fire():
     maze = [[0] * 26 for i in range(26)]
+
     while not tanks.game.game_over:
         for tile in tanks.game.level.obstacle_rects:
             maze[tile.y / 16][tile.x / 16] = 1
+
         for player in tanks.players:
             available_positions = player.available_pos
             available_fire = player.available_fire
+            available_pos = []
+            available_dire = []
+            for i in range(len(available_positions)):
+                if len(available_positions[i]):
+                    available_dire.append(i)
+                    available_pos.append(available_positions[i][0])
+
             for bullet in tanks.bullets:
                 for i in range(len(available_fire)):
                     if bullet.owner == 1 and bullet.direction == (i + 3) % 3 and bullet.rect.collidelist(
@@ -91,58 +113,115 @@ def player_move():
                         if player.state == player.STATE_ALIVE:
                             player.rotate(i)
                             player.fire()
-                            print ("向%s方向拦截") % (i)
+                            # print ("向%s方向拦截") % (i)
                     elif bullet.owner == 1 and bullet.rect.colliderect(player.rect):
-                        print ("躲避")
-
+                        # print ("躲避")
+                        player.move(available_pos[0])
 
             for enemy in tanks.enemies:
-                # print ("敌人(%s,%s),自己(%s,%s)") % (enemy.rect.x/16, enemy.rect.y/16,player.rect.x/16,player.rect.y/16)
-                move_path = AStar(maze, 0, 0)
+
                 for i in range(len(available_fire)):
                     if enemy.rect.collidelist(available_fire[i]) != -1:
                         if player.state == player.STATE_ALIVE:
                             player.rotate(i)
                             player.fire()
-                        print ("自由开火方向%s") % (i)
-                # path = enemy.path[:8]
-                # is_fire = False
+                        # print ("自由开火方向%s") % (i)
+
+
+def player_move():
+    maze = [[0] * 26 for i in range(26)]
+
+    while not tanks.game.game_over:
+        for tile in tanks.game.level.obstacle_rects:
+            maze[tile.y / 16][tile.x / 16] = 1
+
+        for player in tanks.players:
+            # for i in range(len(tanks.players)):
+            #     player = tanks.players[i]
+            if player.state == player.STATE_ALIVE:
+                available_positions = player.available_pos
+                available_fire = player.available_fire
+                available_pos = []
+                available_dire = []
+                player.move_path = []
+                for i in range(len(available_positions)):
+                    if len(available_positions[i]):
+                        available_dire.append(i)
+                        available_pos.append(available_positions[i][0])
+                if available_dire and player.direction in available_dire:
+                    # print available_dire
+                    player.move(player.direction)
+                else:
+                    # print available_dire
+                    player.move(player.direction)
+                    player.move(random.randint(0,3))
+
                 #
-                # for pos in path:
-                #     x, y = pos[0], pos[1]
-                #     if x == player.rect[0] and y <= player.rect[1]:
-                #         #             在上面
-                #         bullet_speed = 5
-                #         if player.superpowers > 0:
-                #             bullet_speed = 8
+                for bullet in tanks.bullets:
+                    for i in range(len(available_fire)):
+                        if bullet.owner == 1 and bullet.rect.colliderect(player.rect):
+                            player.move(available_dire[0])
+                # if player.move_path:
+                #     for enemy in tanks.enemies:
+                #         if enemy.rect.y / 16 > 20:
+                #             # print ("优先级更高的敌人(%s,%s)-->(%s,%s)") % (
+                #             #     player.rect.x / 16, player.rect.y / 16, enemy.rect.x / 16, enemy.rect.y / 16,)
+                #             player.move_path = AStar(maze, (player.rect.x / 16, player.rect.y / 16),
+                #                                      (enemy.rect.x / 16, enemy.rect.y / 16))
                 #
-                #         time_enemy = path.index(pos) / enemy.speed
-                #         time_player = (player.rect[1] - y) / bullet_speed
-                #         if (time_enemy == time_player):
-                #             player.rotate(tanks.Tank.DIR_UP)
-                #             is_fire = True
-                # if is_fire:
-                #     if player.state == player.STATE_ALIVE:
-                #         player.fire()
-                #     surface_hit = pygame.Surface((16 * 2, 16 * 2)).convert_alpha()
-                #     surface_hit.fill((255, 0, 255, 0))
-                #     tanks.screen.blit(surface_hit, (x, y))
-                #     print ("瞄准开火(%s,%s)") % (x, y)
-            for i in range(len(available_positions)):
-                print ("%s,方向%s")%(available_positions[i],i)
+                # else:
+                #     if tanks.enemies:
+                #         # print ("随机找一个敌人(%s,%s)-->(%s,%s)") % (
+                #         #     player.rect.left / 16, player.rect.y / 16, tanks.enemies[0].rect.x / 16,
+                #         #     tanks.enemies[0].rect.y / 16,)
+                #         player.move_path = AStar(maze, (player.rect.x / 16, player.rect.y / 16),
+                #                                  (tanks.enemies[0].rect.x / 16, tanks.enemies[0].rect.y / 16))
+                #
+                # if player.move_path:
+                #     surface_plan = pygame.Surface((16 * 2, 16 * 2)).convert_alpha()
+                #     surface_plan.fill((0, 125, 0, 10))
+                #     for x, y in player.move_path:
+                #         tanks.screen.blit(surface_plan, pygame.Rect([x * 16, y * 16], [x + 16, y + 16]))
+                #     # print player.move_path
+                #     change_plan = False
+                #     while (len(player.move_path)>0 and (x, y == player.rect.x / 16, player.rect.y / 16 or change_plan == False)):
+                #         (x, y) = player.move_path[-1]
+                #         player.move_path = player.move_path[:-1]
+                #         # print x, y, player.move_path
+                #         #     dirction = ("向上", "向右", "向下", "向左")
+                #         dir = -1
+                #         if y * 16 > player.rect.y:
+                #             # print "DOWN"
+                #             dir = 2
+                #         elif y * 16 < player.rect.y:
+                #             # print "UP"
+                #             dir = 0
+                #         elif x * 16 > player.rect.x:
+                #             # print "right"
+                #             dir = 1
+                #         elif x * 16 < player.rect.x:
+                #             # print "left"
+                #             dir = 3
+                #         player.pressed[dir] = True
+                #         for enemy in tanks.enemies:
+                #             if enemy.rect.y / 16 > 20:
+                #                 # print ("优先级更高的敌人(%s,%s)-->(%s,%s)") % (
+                #                 #     player.rect.x / 16, player.rect.y / 16, enemy.rect.x / 16, enemy.rect.y / 16,)
+                #                 # player.move_path = AStar(maze, (player.rect.x / 16, player.rect.y / 16),
+                #                 #                          (enemy.rect.x / 16, enemy.rect.y / 16))
+                #                 change_plan = True
+                #         player.pressed = [False] * 4
 
 
-
-        # 获取上下左右能达到的坐标范围
-
-def AStar(maze,start,end):
-    pass
 
 
 def player_move_gui():
     th = threading.Thread(target=player_move)
     th.setDaemon(True)  # 守护线程
     th.start()
+    th2 = threading.Thread(target=player_fire)
+    th2.setDaemon(True)  # 守护线程
+    th2.start()
 
 
 def route_info():
@@ -156,7 +235,7 @@ def route_info():
             all_directions = [player.DIR_UP, player.DIR_RIGHT, player.DIR_DOWN, player.DIR_LEFT]
             x = int(round(player.rect.left / 16))
             y = int(round(player.rect.top / 16))
-            player.available_pos = [[],[],[],[]]
+            player.available_pos = [[], [], [], []]
             player.available_fire = [[pygame.Rect(player.rect[0] + 11, player.rect[1] - 8, 6, 8)],
                                      [pygame.Rect(player.rect[0] + 26, player.rect[1] + 11, 8, 6)],
                                      [pygame.Rect(player.rect[0] + 11, player.rect[1] + 26, 6, 8)],
@@ -237,13 +316,11 @@ def route_info():
                     new_fire_rect = player.available_fire[3][0]
 
                     while (fire_isHit == False):
-
                         if new_fire_rect.left < 0:
                             fire_isHit = True
                         elif new_fire_rect.collidelist(player.level.obstacle_rects) == -1:
                             player.available_fire[3].append(new_fire_rect)
                             new_fire_rect = new_fire_rect.move(-8, 0)
-
                         else:
                             fire_isHit = True
             for pos_list in player.available_pos:
